@@ -2,7 +2,7 @@
 
 The `coursectl` is a tool to author courses on web apps built using the [Community LMS][1].
 
-https://github.com/fossunited/community
+[1]: https://github.com/fossunited/community
 
 ## How to install
 
@@ -18,11 +18,13 @@ Once that is done, install using `coursectl` using pip:
 $ pip install https://github.com/fossunited/coursectl/zipball/master/"
 ```
 
+[frappe-client]: https://github.com/frappe/frappe-client
+
 ### How to use
 
-The Community LMS is built using the frappe framework and the `coursectl` command requires the api-key and api-secret to communite with the server. Please refer to [Frappe Documentation][1] to learn how to create them.
+The Community LMS is built using the frappe framework and the `coursectl` command requires the api-key and api-secret to communite with the server. Please refer to [Frappe Documentation][2] to learn how to create them.
 
-[1]: https://frappeframework.com/docs/user/en/guides/integration/how_to_set_up_token_based_auth
+[2]: https://frappeframework.com/docs/user/en/guides/integration/how_to_set_up_token_based_auth
 
 
 ### Configure 
