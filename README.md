@@ -54,3 +54,8 @@ $ coursectl configure --profile dev
 ### Pulling an existing course from a server
 
 TODO: add documentation for every command
+
+
+## License
+
+This repository has been released under the [MIT License](https://github.com/fossunited/coursectl/blob/main/LICENSE).
