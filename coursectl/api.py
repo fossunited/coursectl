@@ -39,6 +39,10 @@ class API:
         course = Course.load(self.frappe, name)
         course.save_file()
 
+    def push_course(self, filename):
+        course = Course.from_file(filename)
+        course.push(self)
+
     def save_document(self, doctype, name, doc):
         data = {
             "doctype": doctype,
@@ -53,7 +57,6 @@ class API:
     def invoke_method(self, method, data):
         url = self.frappe.url + "/api/method/" + method
         result = self.frappe.session.post(url, json=data).json()
-        print("result:", result)
         message = result['message']
         if message.get("ok"):
             return message
@@ -111,6 +114,7 @@ class Lesson:
         return {
             "chapter": self.chapter,
             "include_in_preview": self.include_in_preview,
+            "title": self.title,
             "body": self.body
         }
 
@@ -145,14 +149,47 @@ class Course:
     @classmethod
     def from_file(cls, filename="course.yml"):
         data = yaml.safe_load(open(filename))
-        data['chapters'] = [Chapter.from_dict(c) for c in data['chapters']]
+        data['chapters'] = [Chapter.from_dict(data["name"], c) for c in data['chapters']]
         return cls(data['name'], data)
+
+    def push(self, api):
+        doc = api.get_doc("LMS Course", self.name) or {}
+
+        keys = ['name', 'is_published', 'title', 'short_introduction', 'description']
+        for k in keys:
+            doc[k] = self.doc[k]
+
+        for c in self.chapters:
+            c.push(api)
+
+        doc['chapters'] = [{"chapter": c.name} for c in self.chapters]
+        api.save_document("LMS Course", self.name, doc)
 
 class Chapter:
     def __init__(self, name, doc):
         self.name = name
         self.doc = doc
         self.lessons = [row['lesson'] for row in doc['lessons']]
+
+    @property
+    def course(self):
+        return self.doc['course']
+
+    @property
+    def title(self):
+        return self.doc['title']
+
+    @property
+    def description(self):
+        return self.doc['description']
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, Chapter)
+            and self.name == other.name
+            and self.title == other.title
+            and self.description == other.description
+            and self.lessons == other.lessons)
 
     def to_simple_dict(self):
         return {
@@ -171,7 +208,7 @@ class Chapter:
         return cls(name, doc)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, course, data):
         """Creates a Course from dictionary as chapter is specified in the course.yml file.
 
         Expected format:
@@ -183,12 +220,36 @@ class Chapter:
                 - getting-started/hello-world.md
         """
         doc = dict(data)
+        doc['course'] = course
         doc['lessons'] = [{"lesson": cls.find_lesson_name(path)} for path in data['lessons']]
         return cls(data['name'], doc)
 
     @classmethod
     def find_lesson_name(cls, filepath):
         return Path(filepath).stem
+
+    def push(self, api):
+        doc = api.get_doc("Chapter", self.name)
+        if not doc:
+            self.create(api)
+            doc = api.get_doc("Chapter", self.name)
+
+        c2 = Chapter(self.name, doc)
+        if self == c2:
+            print(f"Chapter {self.name}: no changes to update")
+            return
+
+        keys = ['course', 'title', 'description']
+        for k in keys:
+            doc[k] = self.doc[k]
+        doc['lessons'] = [{"lesson": lesson} for lesson in self.lessons]
+        api.save_document("Chapter", self.name, doc)
+        print(f"Chapter {self.name}: updated")
+
+    def create(self, api):
+        doc = {"course": self.course, "title": self.title, "description": self.description}
+        api.save_document("Chapter", self.name, doc)
+
 
 
 LESSON_TEMPLATE = """

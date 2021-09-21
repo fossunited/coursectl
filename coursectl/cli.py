@@ -65,6 +65,18 @@ def pull_lesson(ctx, name):
     api = API(profile=ctx.obj['profile'])
     api.pull_lesson(name)
 
+@cli.command()
+@click.pass_context
+@click.argument("filename", type=click.Path(exists=True), default="course.yml")
+def push_course(ctx, filename):
+    """Pushes a course to the server.
+
+    Also pushes the chapters.
+    """
+    api = API(profile=ctx.obj['profile'])
+    api.push_course(filename)
+
+
 def main():
     cli()
 
