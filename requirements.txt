@@ -1,3 +1,4 @@
 git+https://github.com/frappe/frappe-client#egg=frappeclient
 click
 frontmatter
+PyYAML
