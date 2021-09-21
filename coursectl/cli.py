@@ -8,22 +8,26 @@ Script to manage courses on Community LMS.
 import os
 import click
 from . import config
+from .api import API
 
 @click.group()
-def cli():
+@click.option("--profile", help="name of the configuration profile to use", default="default", envvar="FRAPPE_PROFILE")
+@click.pass_context
+def cli(ctx, profile):
     """The CLI tool to manage courses on Community LMS.
     """
-    pass
+    ctx.ensure_object(dict)
+    ctx.obj['profile'] = profile
 
 @cli.command()
-@click.option("--profile", help="name of the profile to create/update", default="default")
-def configure(profile):
+@click.pass_context
+def configure(ctx):
     """Configure coursectl.
 
     This command will prompt for FRAPPE_API_KEY, FRAPPE_API_SECRET and
     FRAPPE_SITE_URL and saves them in the config file.
     """
-
+    profile = ctx.obj['profile']
     values = config.read_config(profile)
     def prompt(key):
         values[key] = click.prompt(key, default=os.getenv(key.upper()) or values.get(key))
@@ -34,6 +38,23 @@ def configure(profile):
 
     config.write_config(profile, values)
 
+@cli.command()
+@click.pass_context
+def version(ctx):
+    """Prints the version of the coursectl command and the server.
+    """
+    from . import __version__
+    print(__version__)
+
+@cli.command()
+@click.pass_context
+@click.argument("filenames", type=click.Path(exists=True), nargs=-1, required=True)
+def push_lesson(ctx, filenames):
+    """Prints the version of the coursectl command and the server.
+    """
+    api = API(profile=ctx.obj['profile'])
+    for f in filenames:
+        api.push_lesson(f)
 
 def main():
     cli()
