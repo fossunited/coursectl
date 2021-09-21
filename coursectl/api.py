@@ -35,6 +35,12 @@ class API:
         lesson = Lesson.from_file(filename)
         self.save_document("Lesson", lesson.name, lesson.dict())
 
+    def pull_lesson(self, name):
+        print("{} -- pulling lesson {} ...".format(self.config['frappe_site_url'], name))
+        doc = self.frappe.get_doc("Lesson", name)
+        lesson = Lesson(name, doc)
+        lesson.save_file()
+
 def invoke_method(frappe, method, data):
     url = frappe.url + "/api/method/" + method
     result = frappe.session.post(url, json=data).json()
@@ -49,24 +55,40 @@ RE_TITLE = re.compile("# (.*)")
 class Lesson:
     def __init__(self, name, doc):
         self.name = name
-        self.doc = doc
-        self.chapter = self.doc.get("chapter", "no-chapter")
-        self.title = self.doc.get("title", name)
-        self.include_in_preview = self.doc.get("include_in_preview") == True
+        self.chapter = doc.get("chapter", "no-chapter")
+        self.title = doc.get("title", name)
+        self.body = doc.get("body", "")
+        self.include_in_preview = doc.get("include_in_preview") == True
 
     def _load_file(self, path: Path):
         text = path.read_text()
         data = frontmatter.loads(text)
-        self.body = data.content
-        self.doc = dict(data)
 
-        self.chapter = self.doc.get("chapter") or path.parent.name
-        self.include_in_preview = self.doc.get("include_in_preview") == True
-        self.title = self.find_title()
+        title_line, *lines = data.content.strip().splitlines()
+        self.title = title_line.strip(" #")
+        self.body = "\n".join(lines).strip()
+
+
+        self.chapter = data.get("chapter") or path.parent.name
+        self.include_in_preview = data.get("include_in_preview") == True
 
     def find_title(self):
         m = RE_TITLE.search(self.body)
         return m.group(1).strip() if m else self.name
+
+    def save_file(self):
+        """Saves this lesson as a file.
+        """
+        path = Path(f"{self.chapter}/{self.name}.md")
+        path.parent.mkdir(exist_ok=True)
+
+        text = LESSON_TEMPLATE.format(
+            title=self.title,
+            body=self.body,
+            include_in_preview=str(self.include_in_preview).lower()
+        )
+        print("writing file", path)
+        path.write_text(text)
 
     @classmethod
     def from_file(cls, filename):
@@ -82,3 +104,13 @@ class Lesson:
             "include_in_preview": self.include_in_preview,
             "body": self.body
         }
+
+LESSON_TEMPLATE = """
+---
+include_in_preview: {include_in_preview}
+---
+
+# {title}
+
+{body}
+"""

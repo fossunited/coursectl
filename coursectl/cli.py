@@ -50,11 +50,20 @@ def version(ctx):
 @click.pass_context
 @click.argument("filenames", type=click.Path(exists=True), nargs=-1, required=True)
 def push_lesson(ctx, filenames):
-    """Prints the version of the coursectl command and the server.
+    """Pushes one or more lessons to the server.
     """
     api = API(profile=ctx.obj['profile'])
     for f in filenames:
         api.push_lesson(f)
+
+@cli.command()
+@click.pass_context
+@click.argument("name")
+def pull_lesson(ctx, name):
+    """Pulls a lesson from the server and saves it locally.
+    """
+    api = API(profile=ctx.obj['profile'])
+    api.pull_lesson(name)
 
 def main():
     cli()
