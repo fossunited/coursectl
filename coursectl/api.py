@@ -34,6 +34,16 @@ class API:
         lesson = Lesson(name, doc)
         lesson.save_file()
 
+    def push_exercise(self, filename):
+        print("{} -- pushing exercise {}".format(self.config['frappe_site_url'], filename))
+        exercise = Exercise.from_file(filename)
+        exercise.push(api=self)
+
+    def pull_exercise(self, name):
+        print("{} -- pulling exercise {} ...".format(self.config['frappe_site_url'], name))
+        exercise = Exercise.load(self, name)
+        exercise.save_file()
+
     def pull_course(self, name):
         print("{} -- pulling course {} ...".format(self.config['frappe_site_url'], name))
         course = Course.load(self.frappe, name)
@@ -256,6 +266,61 @@ class Chapter:
         api.save_document("Chapter", self.name, doc)
 
 
+class Exercise:
+    FIELDS = ["title", "description", "code", "answer", "hints", "tests"]
+
+    def __init__(self, name, doc):
+        self.name = name
+        self.doc = self.subdict(doc, self.FIELDS)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, Exercise)
+            and self.name == other.name
+            and self.doc == other.doc)
+
+    def subdict(self, d, keys):
+        return {k: d[k] for k in keys if k in d}
+
+    def push(self, api):
+        e = self.load(api, self.name)
+        if self == e:
+            print(f"Exercise {self.name}: no changes to update")
+            return
+        else:
+            api.save_document("Exercise", self.name, self.doc)
+            print(f"Exercise {self.name}: updated")
+
+    @classmethod
+    def load(cls, api, name):
+        doc = api.get_doc("Exercise", name)
+        return cls(name, doc)
+
+    @classmethod
+    def from_file(cls, filename):
+        path = Path(filename).absolute()
+        name = path.stem
+        doc = yaml.safe_load(path.open())
+        return cls(name, doc)
+
+    def save_file(self):
+        filename = f"exercises/{self.name}.yml"
+        path = Path(filename)
+        path.parent.mkdir(exist_ok=True)
+        with path.open("w") as f:
+            yaml.safe_dump(self.doc, f, sort_keys=False)
+        print("saved exercise to", path)
+
+# Hack from Stackoverflow:
+# https://stackoverflow.com/questions/45004464/yaml-dump-adding-unwanted-newlines-in-multiline-strings#45004775
+yaml.SafeDumper.org_represent_str = yaml.SafeDumper.represent_str
+
+def repr_str(dumper, data):
+    if '\n' in data:
+        return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
+    return dumper.org_represent_str(data)
+
+yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
 
 LESSON_TEMPLATE = """
 ---
