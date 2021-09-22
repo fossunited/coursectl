@@ -43,6 +43,11 @@ class API:
         course = Course.from_file(filename)
         course.push(self)
 
+    def whoami(self):
+        url = self.frappe.url + "/api/method/" + "frappe.auth.get_logged_user"
+        response = self.frappe.session.get(url).json()
+        return response['message']
+
     def save_document(self, doctype, name, doc):
         data = {
             "doctype": doctype,

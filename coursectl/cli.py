@@ -77,6 +77,15 @@ def push_course(ctx, filename):
     api.push_course(filename)
 
 
+@cli.command()
+@click.pass_context
+def whoami(ctx):
+    """Prints the current user.
+    """
+    api = API(profile=ctx.obj['profile'])
+    email = api.whoami()
+    print(email)
+
 def main():
     cli()
 
