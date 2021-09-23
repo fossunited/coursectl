@@ -1,8 +1,10 @@
 site_name: coursectl
 theme:
   name: material
+
 nav:
   - index.md
+  - getting-started.md
   - reference.md
 
 repo_url: https://github.com/fossunited/coursectl
