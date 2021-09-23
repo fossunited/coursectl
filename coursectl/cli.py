@@ -96,6 +96,14 @@ def push_course(ctx, filename):
     api = API(profile=ctx.obj['profile'])
     api.push_course(filename)
 
+@cli.command()
+@click.pass_context
+@click.argument("course_name")
+def clone(ctx, course_name):
+    """Clones a course from the server.
+    """
+    api = API(profile=ctx.obj['profile'])
+    api.clone(course_name)
 
 @cli.command()
 @click.pass_context

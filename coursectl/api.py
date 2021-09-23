@@ -48,10 +48,27 @@ class API:
         print("{} -- pulling course {} ...".format(self.config['frappe_site_url'], name))
         course = Course.load(self.frappe, name)
         course.save_file()
+        return course
 
     def push_course(self, filename):
         course = Course.from_file(filename)
         course.push(self)
+
+    def clone(self, course_name):
+        course = self.pull_course(course_name)
+        for c in course.chapters:
+            for name in c.lessons:
+                self.pull_lesson(name)
+
+        for name in self.get_exercises(course_name):
+            self.pull_exercise(name)
+
+    def get_exercises(self, course_name):
+        """Returns names of all exercises in a course.
+        """
+        filters = {"course": course_name}
+        exercises = self.frappe.get_list("Exercise", fields=['name'], filters=filters)
+        return [e['name'] for e in exercises]
 
     def whoami(self):
         url = self.frappe.url + "/api/method/" + "frappe.auth.get_logged_user"
@@ -143,7 +160,7 @@ class Course:
     def title(self):
         return self.doc.get('title')
 
-    def write_file(self, filename="course.yml"):
+    def save_file(self, filename="course.yml"):
         print("writing file course.yml")
         with open("course.yml", "w") as f:
             data = self.dict()
