@@ -1,5 +1,21 @@
 # Reference
 
+## `coursectl clone`
+
+Clones a course from the server.
+
+```
+$ coursectl clone the-joy-programming
+...
+```
+
+This fectches the entire course and writes it as files into the current directory.
+
+The generated files include:
+- course.yml file with course and chapter info
+- one file for each lesson with name `$chapter_name/$lesson_name.md`
+- one file for each exercise stored in `exercises/$exercise_name.yml`
+
 ## `coursectl configure`
 
 Prompts for site url and api credentials and saves them in `~/.config/frappe/config` file.
