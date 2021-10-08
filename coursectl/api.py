@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 import frontmatter
 from frappeclient import FrappeClient
@@ -95,8 +94,6 @@ class API:
         else:
             raise Exception(message.get("error") or f"unknown error: {message}")
 
-RE_TITLE = re.compile("# (.*)")
-
 class Lesson:
     def __init__(self, name, doc):
         self.name = name
@@ -109,16 +106,11 @@ class Lesson:
         text = path.read_text()
         data = frontmatter.loads(text)
 
-        title_line, *lines = data.content.strip().splitlines()
-        self.title = title_line.strip(" #")
-        self.body = "\n".join(lines).strip()
+        self.title = data.get("title") or path.stem.replace("-", " ").title()
+        self.body = data.content
 
         self.chapter = data.get("chapter") or path.parent.name
         self.include_in_preview = data.get("include_in_preview") == True
-
-    def find_title(self):
-        m = RE_TITLE.search(self.body)
-        return m.group(1).strip() if m else self.name
 
     def save_file(self):
         """Saves this lesson as a file.
@@ -339,12 +331,11 @@ def repr_str(dumper, data):
 
 yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
 
-LESSON_TEMPLATE = """
+LESSON_TEMPLATE = """\
 ---
+title: {title}
 include_in_preview: {include_in_preview}
 ---
-
-# {title}
 
 {body}
 """
