@@ -125,21 +125,16 @@ Let's first look at the strucure of a lesson.
 
 ```
 ---
+title: Hello, Python!
 include_in_preview: true
 ---
-
-# Hello, Python!
 
 In this lesson, we'll learn how to write simple Python programs.
 ```
 
-The file has three parts. The first one is YAML frontmatter, as used with Jekyll.
+The file has two parts. The first one is YAML frontmatter, as used with Jekyll/github-pages.Everything after that is the contents of the lesson.
 
-The line after that starting with `#` is the title of the lesson.
-
-Everything after that is the contents of the lesson.
-
-The `include_in_preview` decides whether or not a preview is shown to the users who have not joined the course. Typically, the preview is made available for the lessons in the first few chapters.
+The frontmatter typically contains the `title` and `include_in_preview` fields. The `title` field as the name suggests is the title of the lesson. The value of `include_in_preview` field decides whether or not a preview is shown to the users who have not joined the course. Typically, the preview is made available for the lessons in the first few chapters.
 
 Once you make changes to a lesson, you can push it to the server using:
 
