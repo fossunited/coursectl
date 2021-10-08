@@ -25,11 +25,11 @@ class API:
     def push_lesson(self, filename):
         print("{} -- pushing lesson {}".format(self.config['frappe_site_url'], filename))
         lesson = Lesson.from_file(filename)
-        self.save_document("Lesson", lesson.name, lesson.dict())
+        self.save_document("Course Lesson", lesson.name, lesson.dict())
 
     def pull_lesson(self, name):
         print("{} -- pulling lesson {} ...".format(self.config['frappe_site_url'], name))
-        doc = self.frappe.get_doc("Lesson", name)
+        doc = self.frappe.get_doc("Course Lesson", name)
         lesson = Lesson(name, doc)
         lesson.save_file()
 
@@ -85,9 +85,16 @@ class API:
     def get_doc(self, doctype, name):
         return self.frappe.get_doc(doctype, name)
 
+    def exists(self, doctype, name):
+        return bool(self.get_doc(doctype, name))
+
     def invoke_method(self, method, data):
         url = self.frappe.url + "/api/method/" + method
         result = self.frappe.session.post(url, json=data).json()
+        if "message" not in result:
+            print("ERROR:", result)
+            raise Exception(f"Failed to invoke method: {method}")
+
         message = result['message']
         if message.get("ok"):
             return message
@@ -139,7 +146,7 @@ class Lesson:
             "chapter": self.chapter,
             "include_in_preview": self.include_in_preview,
             "title": self.title,
-            "body": self.body
+            "body": self.body or "-"
         }
 
 class Course:
@@ -178,16 +185,20 @@ class Course:
 
     def push(self, api):
         doc = api.get_doc("LMS Course", self.name) or {}
+        is_new_course = not doc
 
         keys = ['name', 'is_published', 'title', 'short_introduction', 'description']
-        for k in keys:
-            doc[k] = self.doc[k]
+        doc.update({k: self.doc[k] for k in keys if k in self.doc})
+
+        if is_new_course:
+            api.save_document("LMS Course", self.name, doc)
 
         for c in self.chapters:
             c.push(api)
 
         doc['chapters'] = [{"chapter": c.name} for c in self.chapters]
         api.save_document("LMS Course", self.name, doc)
+        print(f"Course {self.name}: updated")
 
 class Chapter:
     def __init__(self, name, doc):
@@ -228,7 +239,7 @@ class Chapter:
 
     @classmethod
     def load(cls, frappe, name):
-        doc = frappe.get_doc("Chapter", name)
+        doc = frappe.get_doc("Course Chapter", name)
         return cls(name, doc)
 
     @classmethod
@@ -245,7 +256,7 @@ class Chapter:
         """
         doc = dict(data)
         doc['course'] = course
-        doc['lessons'] = [{"lesson": cls.find_lesson_name(path)} for path in data['lessons']]
+        doc['lessons'] = [{"lesson": cls.find_lesson_name(path)} for path in data['lessons'] or []]
         return cls(data['name'], doc)
 
     @classmethod
@@ -253,10 +264,10 @@ class Chapter:
         return Path(filepath).stem
 
     def push(self, api):
-        doc = api.get_doc("Chapter", self.name)
+        doc = api.get_doc("Course Chapter", self.name)
         if not doc:
             self.create(api)
-            doc = api.get_doc("Chapter", self.name)
+            doc = api.get_doc("Course Chapter", self.name)
 
         c2 = Chapter(self.name, doc)
         if self == c2:
@@ -266,13 +277,20 @@ class Chapter:
         keys = ['course', 'title', 'description']
         for k in keys:
             doc[k] = self.doc[k]
-        doc['lessons'] = [{"lesson": lesson} for lesson in self.lessons]
-        api.save_document("Chapter", self.name, doc)
+
+        def lesson_exists(lesson):
+            exists = api.exists("Course Lesson", lesson)
+            if not exists:
+                print("ignoring missing lesson:", lesson)
+            return exists
+
+        doc['lessons'] = [{"lesson": lesson} for lesson in self.lessons if lesson_exists(lesson)]
+        api.save_document("Course Chapter", self.name, doc)
         print(f"Chapter {self.name}: updated")
 
     def create(self, api):
         doc = {"course": self.course, "title": self.title, "description": self.description}
-        api.save_document("Chapter", self.name, doc)
+        api.save_document("Course Chapter", self.name, doc)
 
 
 class Exercise:
